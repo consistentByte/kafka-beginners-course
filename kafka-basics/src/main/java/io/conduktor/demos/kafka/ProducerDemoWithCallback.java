@@ -24,6 +24,7 @@ public class ProducerDemoWithCallback {
         // connect to localhost
         Properties properties = new Properties();
         properties.setProperty("bootstrap.servers", "127.0.0.1:9092");
+        properties.setProperty("batch.size", "400");
 
         //set producer properties
         properties.setProperty("key.serializer", StringSerializer.class.getName());
@@ -37,29 +38,35 @@ public class ProducerDemoWithCallback {
 //        ProducerRecord<String, String> producerRecord = new ProducerRecord<>("demo.java", "HEY WORLD!, PRODUCER WITH CALLBACK");
 
         for(int i=0; i<10; i++) {
-            ProducerRecord<String, String> producerRecord = new ProducerRecord<>("demo.java", "Hello World"+i);
-            // send Data
-            producer.send(producerRecord, new Callback() {
-                @Override
-                public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-                    // executes every time a record successfully sent or an exception is thrown.
-                    if(e == null) {
-                        // The record was successfully sent
-                        log.info("Received new metadata \n" +
-                                "Topic: " + recordMetadata.topic() + "\n"+
-                                "Partition: " + recordMetadata.partition() + "\n"+
-                                "Offset: " + recordMetadata.offset() + "\n"+
-                                "Timestamp: " + recordMetadata.timestamp() + "\n"
-                        );
+            for(int j=0; j<30; j++) {
+                ProducerRecord<String, String> producerRecord = new ProducerRecord<>("demo.java", "Hello World"+j);
+                // send Data
+                producer.send(producerRecord, new Callback() {
+                    @Override
+                    public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+                        // executes every time a record successfully sent or an exception is thrown.
+                        if(e == null) {
+                            // The record was successfully sent
+                            log.info("Received new metadata \n" +
+                                    "Topic: " + recordMetadata.topic() + "\n"+
+                                    "Partition: " + recordMetadata.partition() + "\n"+
+                                    "Offset: " + recordMetadata.offset() + "\n"+
+                                    "Timestamp: " + recordMetadata.timestamp() + "\n"
+                            );
 
-                    } else {
-                        log.error("Error while Producing", e);
+                        } else {
+                            log.error("Error while Producing", e);
+                        }
                     }
-                }
-            });
+                });
+            }
+
+            try {
+                Thread.sleep(500);
+            } catch(InterruptedException e) {
+                e.printStackTrace();
+            }
         }
-
-
         // tell the producer to send all data and block until done --synchronous
         producer.flush();
 
