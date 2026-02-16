@@ -1,82 +1,60 @@
 package io.conduktor.demos.kafka;
 
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.util.Arrays;
 import java.util.Properties;
 
-public class ProducerDemoWithKeys {
+public class ConsumerDemo {
 
-    private static final Logger log = LoggerFactory.getLogger(ProducerDemoWithKeys.class.getSimpleName());
+    private static final Logger log = LoggerFactory.getLogger(ConsumerDemo.class.getSimpleName());
 
     static void main() {
         log.info("I am a Kafka Producer");
 
-        System.out.println("Hello World!");
+        String groupId = "my-java-application";
+        String topic = "demo.java";
 
-        // create Producer Properties
-
+        // create consumer Properties
         // connect to localhost
         Properties properties = new Properties();
         properties.setProperty("bootstrap.servers", "127.0.0.1:9092");
-        properties.setProperty("batch.size", "400");
 
-        //set producer properties
-        properties.setProperty("key.serializer", StringSerializer.class.getName());
-        properties.setProperty("value.serializer", StringSerializer.class.getName());
+        //set consumer config
+        properties.setProperty("key.deserializer", StringDeserializer.class.getName());
+        properties.setProperty("value.deserializer", StringDeserializer.class.getName());
 
-        // Create the Producer
-            // kafka producer with key as string, and value as string
-        KafkaProducer<String, String> producer = new KafkaProducer<>(properties);
+        // Set id of Consumer Group, if consumer group does not exist, fail, so set the consumer group before starting the app
+        properties.setProperty("group.id", groupId);
 
-            // create a producer record
-//        ProducerRecord<String, String> producerRecord = new ProducerRecord<>("demo.java", "HEY WORLD!, PRODUCER WITH CALLBACK");
+        // offset reset
+        properties.setProperty("auto.offset.reset", "earliest");
 
-        for(int i=0; i<2; i++) {
+        // Create a Consumer
+            // kafka consumer with key as string, and value as string
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties);
 
+//            consume record
 
-            for(int j=0; j<10; j++) {
+//            in subscribe, pass in pattern or a collection of topics.
 
-                String topic = "demo.java";
-                String key = "id_"+j;
-                String value = "hello world "+j;
+        consumer.subscribe(Arrays.asList(topic));
 
-//            To make sure, same key goes to same partition.
+        // keep on pulling data infinitely
+        while(true) {
+            log.info("Polling");
+            ConsumerRecords<String, String> records= consumer.poll(Duration.ofMillis(1000));
 
-                ProducerRecord<String, String> producerRecord = new ProducerRecord<>(topic, key, value);
-
-
-                // send Data
-                producer.send(producerRecord, new Callback() {
-                    @Override
-                    public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-                        // executes every time a record successfully sent or an exception is thrown.
-                        if(e == null) {
-                            // The record was successfully sent
-                            log.info("Key: "+ key + " | Partition: "+ recordMetadata.partition());
-
-                        } else {
-                            log.error("Error while Producing", e);
-                        }
-                    }
-                });
-            }
-
-            try {
-                Thread.sleep(500);
-            } catch(InterruptedException e) {
-                e.printStackTrace();
+            for(ConsumerRecord<String, String> record: records) {
+                log.info("Key: "+ record.key()+", Value: "+ record.value());
+                log.info("Partition: "+ record.partition()+", Offset: "+ record.offset());
             }
         }
-        // tell the producer to send all data and block until done --synchronous
-        producer.flush();
-
-        // flush and close the producer
-        producer.close();
     }
 }
