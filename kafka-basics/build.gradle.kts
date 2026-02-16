@@ -18,7 +18,7 @@ dependencies {
     // Source: https://mvnrepository.com/artifact/org.slf4j/slf4j-api
     implementation("org.slf4j:slf4j-api:1.7.36")
 // Source: https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
-    testImplementation("org.slf4j:slf4j-simple:2.0.17")
+    implementation("org.slf4j:slf4j-simple:1.7.36")
 }
 
 tasks.test {
