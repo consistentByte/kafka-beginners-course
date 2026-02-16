@@ -2,6 +2,7 @@ package io.conduktor.demos.kafka;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -12,9 +13,9 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Properties;
 
-public class ConsumerDemoWithShutdown {
+public class ConsumerDemoCooperative {
 
-    private static final Logger log = LoggerFactory.getLogger(ConsumerDemoWithShutdown.class.getSimpleName());
+    private static final Logger log = LoggerFactory.getLogger(ConsumerDemoCooperative.class.getSimpleName());
 
     static void main() {
         log.info("I am a Kafka Producer");
@@ -36,6 +37,11 @@ public class ConsumerDemoWithShutdown {
 
         // offset reset
         properties.setProperty("auto.offset.reset", "earliest");
+
+        properties.setProperty("partition.assignment.strategy", CooperativeStickyAssignor.class.getName());
+
+        //Strategy for static assignments
+//        properties.setProperty("group.instance.id", ".....");
 
         // Create a Consumer
             // kafka consumer with key as string, and value as string
