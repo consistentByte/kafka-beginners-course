@@ -90,6 +90,16 @@ public class OpenSearchConsumer {
         return consumer;
     }
 
+    private static String extractId(String json) {
+        // gson library
+        return JsonParser.parseString(json)
+                .getAsJsonObject()
+                .get("meta")
+                .getAsJsonObject()
+                .get("id")
+                .getAsString();
+
+    }
     static void main() throws IOException {
 
         Logger log = LoggerFactory.getLogger(OpenSearchConsumer.class.getName());
@@ -127,9 +137,23 @@ public class OpenSearchConsumer {
 
                 for(ConsumerRecord<String, String> record: records) {
                     // send the record into OpenSearch
+
+                    //strategy 1
+                    // define an ID using Kafka Record coordinates
+                    // String id = record.topic() + "_" + record.partition() + "_" + record.offset();
+
+                    // Strategy 2
+                    // if we are getting an ID from messages use that.
+
                     try {
+                        String id = extractId(record.value());
+
                         IndexRequest indexRequest = new IndexRequest("wikimedia")
-                                .source(record.value(), XContentType.JSON);
+                                .source(record.value(), XContentType.JSON)
+                                .id(id);
+
+                        // Since now we have provided, an id, if we sent an id again,
+                        // elastic search will update the one in place since now we have provided an id.
 
                         IndexResponse response = openSearchClient.index(indexRequest, RequestOptions.DEFAULT);
 
