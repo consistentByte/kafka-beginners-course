@@ -148,6 +148,25 @@ public class OpenSearchConsumer {
                     // Strategy 2
                     // if we are getting an ID from messages use that.
 
+
+                    // get a reference of main thread
+                    final Thread mainThread = Thread.currentThread();
+                    // Adding a Shutdown hook.
+                    Runtime.getRuntime().addShutdownHook(new Thread() {
+                        public void run(){
+                            log.info("Detected a shutdown, let's exit by calling consumer.wakeup()...");
+                            consumer.wakeup();
+
+                            // Don't finish yet, wait for the main program to finish.
+                            // join the main thred to allow the execution of code in the main thread.
+                            try {
+                                mainThread.join();
+                            } catch(InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }) ;
+
                     try {
                         String id = extractId(record.value());
 
@@ -162,9 +181,16 @@ public class OpenSearchConsumer {
 
                         bulkRequest.add(indexRequest);
 //                        log.info(response.getId());
-                    }
-                    catch(Exception e) {
-                        //
+                    }catch(WakeupException e){
+                        // If wakeException, we knw that this will be thrown so handled
+                        log.info("Consumer is starting to shut down");
+                    } catch(Exception e) {
+                        // if some other exception, log it.
+                        log.error("Unexpected exception in the consumer", e);
+                    } finally {
+                        consumer.close();
+                        // close the consmer, this will also commit offsets
+                        log.info("The consumer is now gracefully shut down");
                     }
                 }
 
