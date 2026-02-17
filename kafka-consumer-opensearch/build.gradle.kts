@@ -10,7 +10,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.opensearch.client:opensearch-rest-high-level-client:3.5.0")
+    implementation("org.opensearch.client:opensearch-rest-high-level-client:1.3.2")
     // Source: https://mvnrepository.com/artifact/com.google.code.gson/gson
     implementation("com.google.code.gson:gson:2.10.1")
 
