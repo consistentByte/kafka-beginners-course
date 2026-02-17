@@ -83,6 +83,7 @@ public class OpenSearchConsumer {
         properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
 
         // create consumer
         KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties);
@@ -163,6 +164,10 @@ public class OpenSearchConsumer {
                         //
                     }
                 }
+
+                // after the whole batch is consumed, then we can commit offsets
+                consumer.commitSync(); // can be commitAsync as well
+                log.info("Offsets have been committed");
             }
         }
         // main code logic
