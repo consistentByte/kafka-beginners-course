@@ -1,11 +1,14 @@
 package io.conductor.demos.kafka.wikimedia;
 
 import com.launchdarkly.eventsource.EventSource;
+import okhttp3.Headers;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import com.launchdarkly.eventsource.EventHandler;
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -26,13 +29,15 @@ public class WikimediaChangesProducer {
 
         EventHandler eventHandler = new WikimediaChangeHandler(producer, topic);
 
+        Map<String, String> headers = new HashMap<>();
+        headers.put("User-Agent", "MyKafkaApp/1.0 (sarvajanik87@gmail.com)");
+
         String url = "https://stream.wikimedia.org/v2/stream/recentchange";
-        EventSource.Builder builder = new EventSource.Builder(eventHandler, URI.create(url)); // handler and url
+        EventSource.Builder builder = new EventSource.Builder(eventHandler, URI.create(url)).headers(Headers.of(headers)); // handler and url
 
         EventSource eventSource = builder.build();
 
         // Start the producer in another thread
-
         eventSource.start(); // to start the event handling
 
         // We produce for 10 minuts and block the program until then

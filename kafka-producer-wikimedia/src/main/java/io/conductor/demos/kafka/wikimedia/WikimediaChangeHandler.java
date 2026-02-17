@@ -45,7 +45,7 @@ public class WikimediaChangeHandler implements EventHandler {
     }
 
     @Override
-    public void onError(Throwable throwable) {
-        log.error("Error in Stream Reading");
+    public void onError(Throwable t) {
+        log.error("Error in Stream Reading", t);
     }
 }
