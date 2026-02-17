@@ -12,12 +12,15 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.bulk.BulkResponse;
 import org.opensearch.action.index.IndexRequest;
+import org.opensearch.action.index.IndexResponse;
 import org.opensearch.client.RequestOptions;
 import org.opensearch.client.RestClient;
 import org.opensearch.client.RestHighLevelClient;
@@ -68,6 +71,25 @@ public class OpenSearchConsumer {
 
         return restHighLevelClient;
     }
+
+    private static KafkaConsumer<String, String> createKafkaConsumer() {
+        String bootstrapServers = "127.0.0.1:9092";
+        String groupId = "consumer-opensearch-demo";
+
+        // Create consumer configs
+        Properties properties = new Properties();
+        properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        properties.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+        properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+
+        // create consumer
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties);
+
+        return consumer;
+    }
+
     static void main() throws IOException {
 
         Logger log = LoggerFactory.getLogger(OpenSearchConsumer.class.getName());
@@ -76,9 +98,10 @@ public class OpenSearchConsumer {
         RestHighLevelClient openSearchClient =  createOpenSearchClient();
 
         // create our kafka client
+        KafkaConsumer<String, String> consumer = createKafkaConsumer();
 
         // we need to create an index on OpenSearch if it doesn't exist already
-        try (openSearchClient){
+        try (openSearchClient; consumer){
             boolean indexExists = openSearchClient.indices().exists(new GetIndexRequest("wikimedia"),  RequestOptions.DEFAULT);
             // if something goes wrong, this try block will automatically close the openSearchClient
             if(!indexExists) {
@@ -88,6 +111,34 @@ public class OpenSearchConsumer {
                 log.info("The wikimedia index has been created");
             } else {
                 log.info("wikimedia index already exists");
+            }
+
+            // subscribe to a topic
+            consumer.subscribe(Collections.singleton("wikimedia.recentchange"));
+
+            // not adding shutdown hooks to focus on consumer part
+            while(true) {
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(3000));
+
+                int recordCount = records.count();
+                log.info("Received "+ recordCount + "record(s)");
+
+                // Now we can send these records to elastic search/opensearch.
+
+                for(ConsumerRecord<String, String> record: records) {
+                    // send the record into OpenSearch
+                    try {
+                        IndexRequest indexRequest = new IndexRequest("wikimedia")
+                                .source(record.value(), XContentType.JSON);
+
+                        IndexResponse response = openSearchClient.index(indexRequest, RequestOptions.DEFAULT);
+
+                        log.info(response.getId());
+                    }
+                    catch(Exception e) {
+                        //
+                    }
+                }
             }
         }
         // main code logic
