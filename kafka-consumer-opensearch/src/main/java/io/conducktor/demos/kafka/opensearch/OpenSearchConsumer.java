@@ -134,6 +134,8 @@ public class OpenSearchConsumer {
                 int recordCount = records.count();
                 log.info("Received "+ recordCount + "record(s)");
 
+                BulkRequest bulkRequest = new BulkRequest();
+
                 // Now we can send these records to elastic search/opensearch.
 
                 for(ConsumerRecord<String, String> record: records) {
@@ -158,10 +160,23 @@ public class OpenSearchConsumer {
 
                         IndexResponse response = openSearchClient.index(indexRequest, RequestOptions.DEFAULT);
 
-                        log.info(response.getId());
+                        bulkRequest.add(indexRequest);
+//                        log.info(response.getId());
                     }
                     catch(Exception e) {
                         //
+                    }
+                }
+
+                if(bulkRequest.numberOfActions() > 0) {
+                    BulkResponse bulkResponse = openSearchClient.bulk(bulkRequest, RequestOptions.DEFAULT);
+                    log.info("Inserted " + bulkResponse.getItems().length+ " record(s)");
+
+                    try {
+                        // to sleep for 1 sec between every call
+                        Thread.sleep(1000);
+                    } catch(InterruptedException e) {
+                        e.printStackTrace();
                     }
                 }
 
